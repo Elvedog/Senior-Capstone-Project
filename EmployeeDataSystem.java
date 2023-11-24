@@ -8,39 +8,75 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Scanner;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumn;
 
 public class EmployeeDataSystem extends JFrame {
     private ArrayList<Employee> employees = new ArrayList<>();
     private JTextField nameField, idField, addressField, phoneField, timeWorkedField;
     private DefaultTableModel tableModel;
     private JTable dataTable;
-
+    private EmployeeEditor employeeEditor = new EmployeeEditor(employees);
+    private JButton editTasksButton;
+    private JButton editWorkScheduleButton; // Button to edit work schedule
+    private JDialog detailsDialog;
     public EmployeeDataSystem() {
         setTitle("Employee Data System");
-        setSize(600, 400);
+        setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
         JPanel inputPanel = new JPanel();
-        inputPanel.setLayout(new GridLayout(6, 2));
-        inputPanel.add(new JLabel("Employee Name:"));
+        inputPanel.setLayout(new GridBagLayout()); // Use GridBagLayout for proper alignment
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5); // Padding between components
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        inputPanel.add(new JLabel("Employee Name:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
         nameField = new JTextField(20);
-        inputPanel.add(nameField);
-        inputPanel.add(new JLabel("Employee ID:"));
+        inputPanel.add(nameField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        inputPanel.add(new JLabel("Employee ID:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridy = 1;
         idField = new JTextField(10);
-        inputPanel.add(idField);
-        inputPanel.add(new JLabel("Address:"));
+        inputPanel.add(idField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        inputPanel.add(new JLabel("Address:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridy = 2;
         addressField = new JTextField(30);
-        inputPanel.add(addressField);
-        inputPanel.add(new JLabel("Phone Number:"));
+        inputPanel.add(addressField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        inputPanel.add(new JLabel("Phone Number:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridy = 3;
         phoneField = new JTextField(15);
-        inputPanel.add(phoneField);
-        inputPanel.add(new JLabel("Time Worked (hours):"));
+        inputPanel.add(phoneField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        inputPanel.add(new JLabel("Time Worked (hours):"), gbc);
+        gbc.gridx = 1;
+        gbc.gridy = 4;
         timeWorkedField = new JTextField(5);
-        inputPanel.add(timeWorkedField);
+        inputPanel.add(timeWorkedField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.gridwidth = 2; // Span two columns for the "Add Employee" button
+        gbc.anchor = GridBagConstraints.CENTER; // Center-align the button
         JButton addButton = new JButton("Add Employee");
-        inputPanel.add(addButton);
+        inputPanel.add(addButton, gbc);
+
         add(inputPanel, BorderLayout.NORTH);
 
         // Create a table to display employee data
@@ -51,16 +87,25 @@ public class EmployeeDataSystem extends JFrame {
         tableModel.addColumn("Address");
         tableModel.addColumn("Phone Number");
         tableModel.addColumn("Time Worked");
+        tableModel.addColumn("Work Schedule");
         JScrollPane scrollPane = new JScrollPane(dataTable);
         add(scrollPane, BorderLayout.CENTER);
 
         JButton editButton = new JButton("Edit Employee");
         JButton deleteButton = new JButton("Delete Employee");
         JButton viewDetailsButton = new JButton("View Employee Details");
+        JButton editSalaryButton = new JButton("Edit Employee Salary");
+        JButton editScheduledTimeButton = new JButton("Edit Employee Scheduled Time");
+        editTasksButton = new JButton("Edit Employee Tasks");
+        editWorkScheduleButton = new JButton("Edit Work Schedule"); // Button for editing work schedule
         JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new GridLayout(0, 1));
         buttonPanel.add(editButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(viewDetailsButton);
+        buttonPanel.add(editSalaryButton);
+        buttonPanel.add(editTasksButton);
+        buttonPanel.add(editWorkScheduleButton); // Add the "Edit Work Schedule" button
         add(buttonPanel, BorderLayout.SOUTH);
 
         addButton.addActionListener(new ActionListener() {
@@ -76,6 +121,7 @@ public class EmployeeDataSystem extends JFrame {
                 employees.add(employee);
                 displayEmployees();
                 clearFields();
+                saveEmployeesToFile();
             }
         });
 
@@ -128,15 +174,141 @@ public class EmployeeDataSystem extends JFrame {
             }
         });
 
-        loadEmployees(); // Load employees from a file
+        editSalaryButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = dataTable.getSelectedRow();
+                if (selectedRow >= 0) {
+                    Employee employee = employees.get(selectedRow);
+                    double newSalary = Double.parseDouble(JOptionPane.showInputDialog("Enter new salary:"));
+                    employeeEditor.editEmployeeSalary(employee, newSalary);
+                    displayEmployees();
+                    saveEmployeesToFile();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Please select an employee to edit salary.");
+                }
+            }
+        });
+
+        editTasksButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = dataTable.getSelectedRow();
+                if (selectedRow >= 0) {
+                    Employee employee = employees.get(selectedRow);
+                    String newTasks = JOptionPane.showInputDialog("Enter new tasks:");
+                    employeeEditor.editEmployeeTasks(employee, newTasks);
+                    displayEmployees();
+                    saveEmployeesToFile();
+                } else {
+                    JOptionPane.showMessageDialog(null, "Please select an employee to edit tasks.");
+                }
+            }
+        });
+
+     // Add an ActionListener to the "Edit Work Schedule" button
+        editWorkScheduleButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = dataTable.getSelectedRow();
+                if (selectedRow >= 0) {
+                    Employee employee = employees.get(selectedRow);
+                    showWorkScheduleDialog(employee);
+                } else {
+                    JOptionPane.showMessageDialog(null, "Please select an employee to edit work schedule.");
+                }
+            }
+        });
+        loadEmployees();
         displayEmployees();
         setVisible(true);
+    }
+
+    private void showWorkScheduleDialog(Employee employee) {
+        // Create an array of input fields for each day of the week
+        JTextField[] dayFields = new JTextField[7];
+        String[] daysOfWeek = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+
+        for (int i = 0; i < 7; i++) {
+            gbc.gridx = 0;
+            gbc.gridy = i;
+            inputPanel.add(new JLabel(daysOfWeek[i]), gbc);
+            gbc.gridx = 1;
+            gbc.gridy = i;
+            dayFields[i] = new JTextField(20);
+            dayFields[i].setText(employee.getWorkScheduleForDay(i)); // Populate with existing data
+            inputPanel.add(dayFields[i], gbc);
+        }
+
+        int result = JOptionPane.showConfirmDialog(
+                null,
+                inputPanel,
+                "Edit Work Schedule",
+                JOptionPane.OK_CANCEL_OPTION
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            // Retrieve the updated schedule from input fields
+            String[] updatedSchedule = new String[7];
+            for (int i = 0; i < 7; i++) {
+                updatedSchedule[i] = dayFields[i].getText();
+            }
+
+            employee.setWorkSchedule(updatedSchedule);
+            displayEmployees();
+            saveEmployeesToFile();
+
+            // Update the "View Employee Details" dialog if it's open
+            if (detailsDialog != null && detailsDialog.isVisible()) {
+                JLabel[] workScheduleLabels = new JLabel[7];
+                Component[] components = detailsDialog.getContentPane().getComponents();
+
+                for (int i = 0; i < 7; i++) {
+                    if (components[i * 2] instanceof JLabel) {
+                        workScheduleLabels[i] = (JLabel) components[i * 2];
+                    }
+                }
+
+                // Update the labels with the new work schedule data
+                for (int i = 0; i < 7; i++) {
+                    if (workScheduleLabels[i] != null) {
+                        workScheduleLabels[i].setText("Work Schedule (" + getDayOfWeek(i) + "): " + updatedSchedule[i]);
+                    }
+                }
+            }
+        }
+    }
+            
+        
+  
+       
+        
+    
+
+    // Helper method to get the day of the week based on an index
+    private String getDayOfWeek(int index) {
+        String[] daysOfWeek = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+        if (index >= 0 && index < daysOfWeek.length) {
+            return daysOfWeek[index];
+        }
+        return "";
     }
 
     private void displayEmployees() {
         clearTable();
         for (Employee employee : employees) {
-            tableModel.addRow(new Object[]{employee.getName(), employee.getId(), employee.getAddress(), employee.getPhoneNumber(), employee.getTimeWorked()});
+            tableModel.addRow(new Object[]{
+                    employee.getName(),
+                    employee.getId(),
+                    employee.getAddress(),
+                    employee.getPhoneNumber(),
+                    employee.getTimeWorked(),
+                    String.join(", ", employee.getWorkSchedule())
+            });
         }
     }
 
@@ -158,7 +330,12 @@ public class EmployeeDataSystem extends JFrame {
     private void saveEmployeesToFile() {
         try (PrintWriter writer = new PrintWriter(new FileWriter("employees.txt"))) {
             for (Employee employee : employees) {
-                writer.println(employee.getName() + "," + employee.getId() + "," + employee.getAddress() + "," + employee.getPhoneNumber() + "," + employee.getTimeWorked());
+                writer.println(employee.getName() + ","
+                        + employee.getId() + ","
+                        + employee.getAddress() + ","
+                        + employee.getPhoneNumber() + ","
+                        + employee.getTimeWorked() + ","
+                        + String.join("|", employee.getWorkSchedule()));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -170,13 +347,16 @@ public class EmployeeDataSystem extends JFrame {
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 String[] parts = line.split(",");
-                if (parts.length == 5) {
+                if (parts.length == 6) {
                     String name = parts[0];
                     String id = parts[1];
                     String address = parts[2];
                     String phoneNumber = parts[3];
                     int timeWorked = Integer.parseInt(parts[4]);
-                    employees.add(new Employee(name, id, address, phoneNumber, timeWorked));
+                    String[] workSchedule = parts[5].split("\\|");
+                    Employee employee = new Employee(name, id, address, phoneNumber, timeWorked);
+                    employee.setWorkSchedule(workSchedule);
+                    employees.add(employee);
                 }
             }
         } catch (FileNotFoundException e) {
@@ -185,28 +365,46 @@ public class EmployeeDataSystem extends JFrame {
     }
 
     private void showEmployeeDetailsDialog(Employee employee) {
-        JDialog dialog = new JDialog(this, "Employee Details");
+        JDialog dialog = new JDialog(this, "Employee Details", true);
         dialog.setLayout(new BorderLayout());
 
-        JPanel detailsPanel = new JPanel(new GridLayout(6, 2));
-        detailsPanel.add(new JLabel("Employee Name:"));
-        detailsPanel.add(new JLabel(employee.getName()));
-        detailsPanel.add(new JLabel("Employee ID:"));
-        detailsPanel.add(new JLabel(employee.getId()));
-        detailsPanel.add(new JLabel("Address:"));
-        detailsPanel.add(new JLabel(employee.getAddress()));
-        detailsPanel.add(new JLabel("Phone Number:"));
-        detailsPanel.add(new JLabel(employee.getPhoneNumber()));
-        detailsPanel.add(new JLabel("Time Worked (hours):"));
-        detailsPanel.add(new JLabel(String.valueOf(employee.getTimeWorked())));
+        JPanel infoPanel = new JPanel(new GridLayout(0, 2));
+        infoPanel.add(createLabel("Employee Name:"));
+        infoPanel.add(new JLabel(employee.getName()));
+        infoPanel.add(createLabel("Employee ID:"));
+        infoPanel.add(new JLabel(employee.getId()));
+        infoPanel.add(createLabel("Address:"));
+        infoPanel.add(new JLabel(employee.getAddress()));
+        infoPanel.add(createLabel("Phone Number:"));
+        infoPanel.add(new JLabel(employee.getPhoneNumber()));
+        infoPanel.add(createLabel("Time Worked (hours):"));
+        infoPanel.add(new JLabel(String.valueOf(employee.getTimeWorked())));
 
-        dialog.add(detailsPanel, BorderLayout.CENTER);
+        JPanel schedulePanel = new JPanel(new GridLayout(0, 2));
+        schedulePanel.add(createLabel("Work Schedule:"));
 
-        dialog.setSize(300, 200);
+        String[] daysOfWeek = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
+        for (int i = 0; i < 7; i++) {
+            String daySchedule = employee.getWorkScheduleForDay(i);
+            JLabel dayLabel = new JLabel(" - " + daysOfWeek[i] + ": " + (daySchedule != null ? daySchedule : "N/A"));
+            schedulePanel.add(dayLabel);
+        }
+
+        dialog.add(infoPanel, BorderLayout.NORTH);
+        dialog.add(schedulePanel, BorderLayout.CENTER);
+
+        dialog.setSize(400, 300);
         dialog.setVisible(true);
     }
 
+    private JLabel createLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        return label;
+    }
+
+    // Main method
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new EmployeeDataSystem());
     }
-}
+} 
