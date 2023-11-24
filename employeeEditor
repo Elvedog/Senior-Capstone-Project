@@ -1,0 +1,35 @@
+package employedatabasesystem;
+
+import java.util.ArrayList;
+
+public class EmployeeEditor {
+    private ArrayList<Employee> employees;
+
+    public EmployeeEditor(ArrayList<Employee> employees) {
+        this.setEmployees(employees);
+    }
+
+    public void editEmployeeTasks(Employee employee, String newTasks) {
+        employee.setTasks(newTasks);
+    }
+
+    public void editEmployeeSalary(Employee employee, double newSalary) {
+        employee.setSalary(newSalary);
+    }
+
+    public void editEmployeeScheduledTime(Employee employee, int newScheduledTime) {
+        if (newScheduledTime >= 0) {
+            employee.setScheduledTime(newScheduledTime);
+        } else {
+            System.out.println("Invalid scheduled time. Scheduled time cannot be negative.");
+        }
+    }
+
+	public ArrayList<Employee> getEmployees() {
+		return employees;
+	}
+
+	public void setEmployees(ArrayList<Employee> employees) {
+		this.employees = employees;
+	}
+}
